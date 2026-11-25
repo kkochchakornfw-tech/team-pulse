@@ -1216,9 +1216,12 @@ async function backupRestore(){const msg=$("#bk-msg"),d=bkData;if(!d||!msg) retu
     for(let i=0;i<files.length;i++){const [id,f]=files[i];step(`กำลังอัปโหลดไฟล์แนบ ${i+1}/${files.length}…`);
       const bin=Uint8Array.from(atob(f.b64||""),c=>c.charCodeAt(0));
       const j=await api(`/files?name=${encodeURIComponent(f.name||"file")}&type=${encodeURIComponent(f.type||"")}`,{method:"POST",body:new Blob([bin]),headers:{"content-type":"application/octet-stream"}});map[id]=j.url}
-    const fix=doc=>files.length?JSON.parse(JSON.stringify(doc).replace(/\/api\/files\/([a-z0-9]+)(\/[^"\s)]*)?/gi,(m,id)=>map[id]||m)):doc;
     let users=0,docs=0,skipped=0;
     const r0=await api("/admin/import",{method:"POST",body:{users:d.users||[]}});users+=r0.users;skipped+=r0.skipped;
+    // people who already have an account here (you, at least) get their id from this server: rewrite every reference
+    const ids=r0.idMap||{},idRe=Object.keys(ids).length?new RegExp(`(["{])(${Object.keys(ids).map(k=>k.replace(/[^A-Za-z0-9]/g,"")).join("|")})(["}])`,"g"):null;
+    const fix=doc=>{let s=JSON.stringify(doc);if(files.length) s=s.replace(/\/api\/files\/([a-z0-9]+)(\/[^"\s)]*)?/gi,(m,id)=>map[id]||m);
+      if(idRe) s=s.replace(idRe,(m,a,id,z)=>a+(ids[id]||id)+z);return JSON.parse(s)};
     let batch=[],size=0;const flush=async()=>{if(!batch.length) return;const r=await api("/admin/import",{method:"POST",body:{docs:batch}});docs+=r.docs;skipped+=r.skipped;batch=[];size=0};
     for(let i=0;i<d.docs.length;i++){const x=fix(d.docs[i]),len=JSON.stringify(x).length;if(size+len>2500000) await flush();batch.push(x);size+=len;
       if(batch.length>=150){step(`กำลังกู้คืน ${i+1}/${d.docs.length} รายการ…`);await flush()}}

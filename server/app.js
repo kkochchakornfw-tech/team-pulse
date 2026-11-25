@@ -326,11 +326,15 @@ export async function handle(req, res) {
       if (!isAdmin(me)) return send(res, 403, { error: "เฉพาะผู้ดูแล" });
       const b = await readBody(req);
       let users = 0, docs = 0, skipped = 0;
+      const idMap = {}; // backup user id → id on this server (same email already here, or id taken)
       const hasOwner = (await store.listUsers()).some((u) => u.role === "owner");
       for (const u of Array.isArray(b.users) ? b.users : []) {
         const email = String(u.email || "").trim().toLowerCase();
-        if (!validEmail(email) || (await store.getUserByEmail(email))) { skipped++; continue; }
+        if (!validEmail(email)) { skipped++; continue; }
+        const have = await store.getUserByEmail(email);
+        if (have) { if (u.id && u.id !== have.id) idMap[u.id] = have.id; skipped++; continue; }
         const id = /^[A-Za-z0-9]{4,40}$/.test(u.id || "") && !(await store.getUser(u.id)) ? u.id : newId();
+        if (u.id && u.id !== id) idMap[u.id] = id;
         let role = ROLES.includes(u.role) ? u.role : "member";
         if (role === "owner" && hasOwner) role = "admin";
         await store.createUser({ id, email, name: String(u.name || email.split("@")[0]).slice(0, 60), role, invitedBy: me.id });
@@ -340,7 +344,7 @@ export async function handle(req, res) {
         if (!COLS.includes(d.col) || !/^[A-Za-z0-9_\-.:]{1,80}$/.test(d.id || "") || !d.data || typeof d.data !== "object" || Array.isArray(d.data)) { skipped++; continue; }
         await store.putDoc(d.col, d.id, d.data); docs++;
       }
-      return send(res, 200, { ok: true, users, docs, skipped });
+      return send(res, 200, { ok: true, users, docs, skipped, idMap });
     }
 
     /* ---------- invite an outside person to follow one project ---------- */
