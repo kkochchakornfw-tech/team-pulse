@@ -340,7 +340,18 @@ export async function handle(req, res) {
         await store.createUser({ id, email, name: String(u.name || email.split("@")[0]).slice(0, 60), role, invitedBy: me.id });
         users++;
       }
-      for (const d of Array.isArray(b.docs) ? b.docs : []) {
+      // remember the id map for the doc batches that follow (done here too, not only in the browser),
+      // and drop member cards a remapped person left under the old id
+      const now = Date.now(), prevMap = await store.getKV("import:idmap");
+      const keep = prevMap && now - (prevMap.at || 0) < 3600000 ? prevMap.map || {} : {};
+      if (Array.isArray(b.users)) await store.setKV("import:idmap", { at: now, map: { ...keep, ...idMap } });
+      const fullMap = Array.isArray(b.users) ? { ...keep, ...idMap } : keep;
+      for (const old of Object.keys(idMap)) { const card = await store.getDoc("members", old); if (card) await store.putDoc("members", old, card, true); }
+      const oldIds = Object.keys(fullMap).filter((k) => /^[A-Za-z0-9]{4,40}$/.test(k));
+      const idRe = oldIds.length ? new RegExp(`(["{])(${oldIds.join("|")})(["}])`, "g") : null;
+      const remap = (d) => (idRe ? JSON.parse(JSON.stringify(d).replace(idRe, (x, a, id, z) => a + (fullMap[id] || id) + z)) : d);
+      for (const d0 of Array.isArray(b.docs) ? b.docs : []) {
+        const d = d0 && typeof d0 === "object" ? remap(d0) : d0;
         if (!COLS.includes(d.col) || !/^[A-Za-z0-9_\-.:]{1,80}$/.test(d.id || "") || !d.data || typeof d.data !== "object" || Array.isArray(d.data)) { skipped++; continue; }
         await store.putDoc(d.col, d.id, d.data); docs++;
       }
