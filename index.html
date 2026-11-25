@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f8f3ea">
+<meta name="description" content="สมุดของทีม: หน้าเอกสาร ไฟล์แนบ ทีมย่อย โปรเจกต์ ปฏิทินประชุม และสถานะว่าใครติดประชุม">
+<title>Team Pulse</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='26' rx='9' fill='%23f7e48b' stroke='%2326221e' stroke-width='2'/%3E%3Cpath d='M8 17h4l2-6 4 12 2-6h4' fill='none' stroke='%2326221e' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Mali:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+<a class="skip" href="#view">ข้ามไปเนื้อหา</a>
+<div class="topbar"><button class="icon-btn" data-act="nav-open" aria-label="เปิดเมนู"><i data-ic="menu"></i></button><b id="topTitle">Team Pulse</b><button class="icon-btn bell" data-act="bell" aria-label="แจ้งเตือน" hidden><i data-ic="bell"></i><span class="bell-n" hidden></span></button><button class="icon-btn no-guest" data-act="search" aria-label="ค้นหา"><i data-ic="search"></i></button></div>
+<div class="app">
+  <aside class="side" id="side">
+    <div class="ws">
+      <span class="logo" aria-hidden="true"><svg viewBox="0 0 32 32" width="34" height="34"><rect x="2.5" y="2.5" width="27" height="27" rx="9" fill="#f7e48b" stroke="#26221e" stroke-width="2"/><path d="M7.5 17h4l2.2-6.2 4.2 12.4 2.1-6.2h4.5" fill="none" stroke="#26221e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <div class="ws-tx"><b>Team Pulse</b><small id="clock">—</small></div>
+      <button class="icon-btn bell" data-act="bell" aria-label="แจ้งเตือน" hidden><i data-ic="bell"></i><span class="bell-n" hidden></span></button>
+    </div>
+    <nav class="nav" aria-label="เมนูหลัก">
+      <button class="no-guest" data-act="search" data-c="aqua"><i data-ic="search"></i>ค้นหา<span class="kbd">Ctrl K</span></button>
+      <button class="guest-only" data-act="go" data-h="requests" data-c="pink"><i data-ic="clip"></i>งานที่ฉันสั่ง</button>
+      <button class="no-guest" data-act="go" data-h="home" data-c="yellow"><i data-ic="home"></i>ภาพรวมตอนนี้</button>
+      <button class="no-guest" data-act="go" data-h="dashboard" data-c="blue"><i data-ic="chart"></i>แดชบอร์ด</button>
+      <button class="no-guest api-only" data-act="go" data-h="intake" data-c="orange"><i data-ic="clip"></i>รับงาน<span class="kbd nav-n" id="intakeN" hidden></span></button>
+      <button class="no-guest" data-act="go" data-h="gallery" data-c="yellow"><i data-ic="image"></i>ผลงานทั้งหมด</button>
+      <button class="no-guest" data-act="go" data-h="projects" data-c="green"><i data-ic="board"></i>บอร์ดโปรเจกต์</button>
+      <button data-act="go" data-h="calendar" data-c="teal"><i data-ic="calendar"></i>ปฏิทินประชุม</button>
+      <button class="no-guest" data-act="go" data-h="teams" data-c="pink"><i data-ic="team"></i>ทีมย่อย</button>
+      <button class="admin-only" data-act="go" data-h="people" data-c="orange"><i data-ic="users"></i>คนและสิทธิ์</button>
+    </nav>
+    <div class="side-sec no-guest">
+      <div class="side-h">พื้นที่ <button class="icon-btn w-only" data-act="new-team" aria-label="สร้างทีมย่อย"><i data-ic="plus"></i></button></div>
+      <div id="sideSpaces"></div>
+    </div>
+    <div class="side-sec no-guest" id="favSec" hidden><div class="side-h">รายการโปรด</div><div id="sideFav"></div></div>
+    <div class="side-sec no-guest">
+      <div class="side-h"><span>หน้าใน <span id="spaceNow" class="space-now"></span></span><button class="icon-btn w-only" data-act="new-page" aria-label="เพิ่มหน้าใหม่"><i data-ic="plus"></i></button></div>
+      <div id="sideTree"></div>
+    </div>
+    <div class="side-sec no-guest">
+      <div class="side-h">คนในทีม <button class="icon-btn w-only" data-act="new-member" aria-label="เพิ่มคนในทีม"><i data-ic="plus"></i></button></div>
+      <div id="sideTeam"></div>
+    </div>
+    <div class="side-foot">
+      <nav class="nav no-guest" aria-label="อื่น ๆ"><button data-act="go" data-h="trash" data-c="orange"><i data-ic="trash"></i>ถังขยะ<span class="kbd" id="trashCount" hidden></span></button></nav>
+      <button class="me-card" id="meCard" data-act="go" data-h="preferences" aria-label="ตั้งค่าและโปรไฟล์"></button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="wrap">
+      <div id="banners" class="banners"></div>
+      <div id="view" tabindex="-1"></div>
+    </div>
+  </main>
+</div>
+<div id="navScrimRoot"></div>
+<div id="panelRoot"></div>
+<div id="modalRoot"></div>
+<div id="menu" class="menu" hidden></div>
+<div id="slash" class="menu slash" hidden></div>
+<div id="tb" class="tb" hidden>
+  <button data-cmd="bold" title="ตัวหนา (Ctrl+B)"><b>B</b></button><button data-cmd="italic" title="ตัวเอียง (Ctrl+I)"><i>I</i></button><button data-cmd="underline" title="ขีดเส้นใต้ (Ctrl+U)"><u>U</u></button><button data-cmd="strikeThrough" title="ขีดฆ่า"><s>S</s></button><button data-cmd="code" title="โค้ด"><i data-ic="code"></i></button><button data-cmd="mark" title="ไฮไลต์">ไฮไลต์</button><button data-cmd="link" title="ใส่ลิงก์"><i data-ic="link"></i></button>
+  <input id="tbLink" placeholder="วางลิงก์แล้วกด Enter" aria-label="ลิงก์" hidden>
+</div>
+<datalist id="whereList"></datalist>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="pen" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="1.8"/></filter></defs></svg>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

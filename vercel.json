@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "vite build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index?path=:path*" }
+  ],
+  "crons": [
+    { "path": "/api/cron?job=digest&period=daily", "schedule": "0 1 * * *" },
+    { "path": "/api/cron?job=digest&period=weekly", "schedule": "0 1 * * 1" }
+  ]
+}
