@@ -71,6 +71,7 @@ export async function handle(req, res) {
     if (url.searchParams.get("path") && p === "/index") p = "/" + url.searchParams.get("path");
     const m = req.method;
     const dev = mailMode() === "dev";
+    const prod = !!process.env.VERCEL; // on the real site, never hand out login links in the page
 
     if (p === "/health") return send(res, 200, { ok: true, mode: "api", storage: store.kind, mail: mailMode() });
 
@@ -83,7 +84,9 @@ export async function handle(req, res) {
       const known = await store.getUserByEmail(email); const first = (await store.countUsers()) === 0;
       let link = null;
       if (known || first || process.env.ALLOW_SIGNUP === "1") { await store.setKV("loginmail:" + email, Date.now()); link = await sendLoginLink(store, req, email); }
-      return send(res, 200, { ok: true, first, devLink: dev ? link : undefined, devNote: dev && !link ? "อีเมลนี้ยังไม่ได้รับเชิญ ให้ผู้ดูแลเชิญก่อน" : undefined });
+      // without email set up on the real site, only the very first sign-in (the owner) gets its link on screen
+      const showLink = dev && (!prod || first);
+      return send(res, 200, { ok: true, first, devLink: showLink ? link : undefined, devNote: dev && !link ? "อีเมลนี้ยังไม่ได้รับเชิญ ให้ผู้ดูแลเชิญก่อน" : dev && !showLink ? "ยังไม่ได้ตั้งค่าส่งอีเมล ขอลิงก์เข้าสู่ระบบจากผู้ดูแลแอป" : undefined });
     }
     if (p === "/auth/verify" && m === "GET") {
       const email = await store.takeToken(hashToken(url.searchParams.get("token") || ""));
@@ -101,7 +104,7 @@ export async function handle(req, res) {
 
     /* ---------- cron (Vercel Cron sends Authorization: Bearer CRON_SECRET) ---------- */
     if (p === "/cron") {
-      const ok = !process.env.CRON_SECRET || req.headers.authorization === "Bearer " + process.env.CRON_SECRET;
+      const ok = process.env.CRON_SECRET ? req.headers.authorization === "Bearer " + process.env.CRON_SECRET : !prod;
       if (!ok) return send(res, 401, { error: "unauthorized" });
       const job = url.searchParams.get("job");
       if (job === "reminders") return send(res, 200, { sent: await runReminders(store, appUrl(req)) });
@@ -114,7 +117,7 @@ export async function handle(req, res) {
       }
       return send(res, 400, { error: "unknown job" });
     }
-    if (p === "/dev/outbox" && dev) return send(res, 200, outbox.map(({ html, ...r }) => r));
+    if (p === "/dev/outbox" && dev && !prod) return send(res, 200, outbox.map(({ html, ...r }) => r));
 
     const fm = p.match(/^\/files\/([a-z0-9]+)/i);
     if (fm && m === "GET") { const f = await store.getFile(fm[1]); return f ? send(res, 200, f.buf, { "Content-Type": f.type || "application/octet-stream", "Cache-Control": "private, max-age=3600" }) : send(res, 404, { error: "not found" }); }

@@ -1,7 +1,11 @@
 // Sessions are HMAC-signed cookies; login links carry a one-time random token whose hash is stored.
 import crypto from "node:crypto";
 
-const secret = () => process.env.AUTH_SECRET || "dev-only-secret-change-me";
+const secret = () => {
+  if (process.env.AUTH_SECRET) return process.env.AUTH_SECRET;
+  if (process.env.VERCEL) throw new Error("AUTH_SECRET is not set"); // never sign real sessions with the public dev key
+  return "dev-only-secret-change-me";
+};
 export const COOKIE = "tp_session";
 const DAY = 86400000;
 
