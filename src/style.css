@@ -1146,3 +1146,8 @@ button.share-chip:hover{filter:brightness(.96)}
 .sh-add{display:flex;gap:6px;flex-wrap:wrap}
 .sh-add #shPick{flex:1 1 200px}
 .sh-add select{width:auto}
+
+/* wipe confirm on the backup card */
+.bk-wipe{display:grid;gap:8px;padding:12px 0;border-top:1px dashed var(--line)}
+.bk-wipe .row{display:flex;gap:8px;flex-wrap:wrap}
+.bk-wipe .inp{max-width:160px}

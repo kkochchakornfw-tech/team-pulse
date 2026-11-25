@@ -691,13 +691,14 @@ function render(full){
   else{S.mounted=key;pageEditor=null;const v=$("#view");
     const keepScroll=full===false||full===undefined?window.scrollY:0;
     const ae=document.activeElement,aid=ae&&ae.id&&v.contains(ae)?ae.id:null;let sel=null;try{if(aid&&ae.selectionStart!=null) sel=[ae.selectionStart,ae.selectionEnd]}catch(e){}
-    const drafts={};v.querySelectorAll("textarea[id],input[id^='inv-'],select[id^='inv-']").forEach(x=>{drafts[x.id]=x.value});
+    const drafts={};v.querySelectorAll("textarea[id],input[id^='inv-'],select[id^='inv-'],#wipe-word").forEach(x=>{drafts[x.id]=x.value});
     const keepFiles=$("#up-files")&&$("#up-files").files.length?$("#up-files"):null;
     v.innerHTML=r.v==="gallery"?viewGallery():r.v==="projects"?viewProjects():r.v==="calendar"?viewCalendar(now):r.v==="trash"?viewTrash():r.v==="preferences"?viewPreferences():r.v==="teams"?viewTeams()
       :r.v==="dashboard"?viewDashboard(now):r.v==="requests"?viewRequests():r.v==="people"?viewPeople():r.v==="intake"?viewIntake():r.v==="req"?viewReqRoom(r.id):viewHome(now);
     if(r.v==="people") loadPeople();
     if(isGuest()&&(r.v==="requests"||r.v==="req")) loadStats();
     Object.entries(drafts).forEach(([k,val])=>{const n=document.getElementById(k);if(n&&val) n.value=val});
+    {const w=$("#wipe-word"),b=$("#wipe-go");if(w&&b) b.disabled=wiping||w.value.trim()!=="ล้าง"}
     v.querySelectorAll("img[data-src]:not([src])").forEach(img=>urlFor(img.dataset.src).then(u=>{if(u) img.src=u}));
     if(keepFiles){const n=$("#up-files");if(n){n.replaceWith(keepFiles);$("#up-fn").textContent=keepFiles.files.length+" ไฟล์"}}
     if(aid){const n=document.getElementById(aid);if(n){n.focus({preventScroll:true});if(sel) try{n.setSelectionRange(sel[0],sel[1])}catch(e){}}}
@@ -1041,6 +1042,9 @@ function viewPeople(){
     +card("yellow","folder","สำรองข้อมูล","",`<div class="bk">
       <div class="bk-row"><div><b>ดาวน์โหลดข้อมูลทั้งหมด</b><p class="muted small-tx">หน้าเอกสาร โปรเจกต์ ปฏิทิน ทีม สติกเกอร์ และรายชื่อคน รวมเป็นไฟล์ .json ไฟล์เดียว เก็บไว้ที่ปลอดภัย</p></div><button class="btn" data-act="backup-export">${icon("arrow-down")}ดาวน์โหลด</button></div>
       <div class="bk-row"><div><b>กู้คืนจากไฟล์สำรอง</b><p class="muted small-tx">เขียนทับรายการที่มีอยู่ในไฟล์ รายการที่ไม่มีในไฟล์ยังอยู่เหมือนเดิม คนที่ยังไม่มีในแอปจะถูกเพิ่มโดยไม่ส่งอีเมล</p></div><button class="btn" data-act="backup-pick">${icon("arrow-up")}เลือกไฟล์</button></div>
+      ${S.role==="owner"?`<div class="bk-row"><div><b>ล้างข้อมูลทั้งหมด</b><p class="muted small-tx">ลบหน้า โปรเจกต์ ปฏิทิน ทีม คอมเมนต์ และบัญชีทุกคนยกเว้นคุณ เริ่มใหม่หมด ระบบดาวน์โหลดไฟล์สำรองให้ก่อนล้าง</p></div><button class="btn danger" data-act="wipe-open">${icon("trash")}ล้างข้อมูล</button></div>
+      <form class="bk-wipe" id="bk-wipe"${wipeOpen?"":" hidden"}><label for="wipe-word">พิมพ์คำว่า <b>ล้าง</b> เพื่อยืนยัน ลบแล้วย้อนกลับไม่ได้ นอกจากกู้คืนจากไฟล์สำรอง</label>
+        <div class="row"><input id="wipe-word" class="inp" autocomplete="off"><button class="btn danger" id="wipe-go" disabled>ลบทั้งหมด</button><button type="button" class="btn ghost" data-act="wipe-close">ยกเลิก</button></div></form>`:""}
       <div id="bk-msg" aria-live="polite"></div></div>`);
 }
 /* ---- page sharing ---- */
@@ -1230,6 +1234,20 @@ async function backupRestore(){const msg=$("#bk-msg"),d=bkData;if(!d||!msg) retu
     setTimeout(()=>location.reload(),1800);
   }catch(e){msg.innerHTML=`<p class="banner soft" data-c="pink">กู้คืนไม่สำเร็จ: ${esc((e&&e.msg)||"ลองอีกครั้ง")} ข้อมูลที่กู้ไปแล้วบางส่วนยังอยู่ ลองกู้คืนจากไฟล์เดิมซ้ำได้</p>`}
 }
+let wipeOpen=false,wiping=false;
+// delegated, so the form keeps working after the people view re-renders on sync
+document.addEventListener("input",e=>{if(e.target.id==="wipe-word"){const b=$("#wipe-go");if(b) b.disabled=wiping||e.target.value.trim()!=="ล้าง"}});
+document.addEventListener("submit",e=>{if(e.target.id!=="bk-wipe") return;e.preventDefault();const w=$("#wipe-word");if(w&&w.value.trim()==="ล้าง"&&!wiping) wipeAll()});
+async function wipeAll(){wiping=true;
+  // the people view re-renders on sync, so look the message box up each time
+  const show=(c,t)=>{const m=$("#bk-msg");if(m) m.innerHTML=`<p class="banner soft" data-c="${c}">${esc(t)}</p>`};
+  const lock=on=>{const f=$("#bk-wipe");if(f) f.querySelectorAll("button,input").forEach(x=>x.disabled=on)};
+  try{lock(true);
+    show("blue","กำลังดาวน์โหลดไฟล์สำรองก่อนล้าง…");await backupExport(true);
+    show("blue","กำลังล้างข้อมูล…");const r=await api("/admin/wipe",{method:"POST",body:{confirm:"ล้าง"}});
+    show("green",`ล้างแล้ว ${r.docs} รายการ${r.users?` และบัญชี ${r.users} คน`:""} กำลังโหลดหน้าใหม่…`);
+    setTimeout(()=>location.reload(),1600);
+  }catch(e){wiping=false;show("pink",`ล้างไม่สำเร็จ: ${(e&&e.msg)||"ลองอีกครั้ง"}`);lock(false)}}
 async function loadPeople(force){
   if(!force&&Date.now()-peopleAt<15000&&S.users){fillPeople();return}
   try{const j=await api("/users");S.users=j.users;peopleAt=Date.now();fillPeople()}catch(e){const el=$("#peopleList");if(el) el.innerHTML=`<div class="muted">โหลดรายชื่อไม่ได้</div>`}}
@@ -1756,6 +1774,8 @@ document.addEventListener("click",e=>{
       remove("comments",id);S.comments=(S.comments||[]).filter(c=>c.id!==id);refreshComments();toast("ลบคอมเมนต์แล้ว");break}
     case "backup-export":backupExport().catch(()=>toast("ดาวน์โหลดไม่สำเร็จ ลองอีกครั้ง"));break;
     case "backup-pick":backupPick();break;
+    case "wipe-open":{wipeOpen=true;const f=$("#bk-wipe");if(f){f.hidden=false;const w=$("#wipe-word");w.value="";$("#wipe-go").disabled=true;w.focus()}break}
+    case "wipe-close":{wipeOpen=false;const f=$("#bk-wipe");if(f) f.hidden=true;break}
     case "backup-cancel":bkData=null;$("#bk-msg").innerHTML="";break;
     case "del-user":if(el.classList.contains("armed")){api("/users/"+el.dataset.uid,{method:"DELETE"}).then(()=>{toast("ลบ "+el.dataset.name+" แล้ว");loadPeople(true)}).catch(err=>toast(err.msg||"ลบไม่สำเร็จ"))}
       else{el.classList.add("armed");el.textContent="ยืนยันลบ “"+el.dataset.name+"”";setTimeout(()=>{if(el.isConnected){el.classList.remove("armed");el.textContent="ลบ"}},4000)}break;

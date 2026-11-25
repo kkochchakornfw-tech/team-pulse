@@ -358,6 +358,22 @@ export async function handle(req, res) {
       return send(res, 200, { ok: true, users, docs, skipped, idMap });
     }
 
+    /* ---------- wipe everything (owner only): start the app over, keeping just your own account ---------- */
+    if (p === "/admin/wipe" && m === "POST") {
+      if (me.role !== "owner") return send(res, 403, { error: "เฉพาะเจ้าของแอป" });
+      const b = await readBody(req);
+      if (b.confirm !== "ล้าง") return send(res, 400, { error: "พิมพ์คำว่า ล้าง เพื่อยืนยัน" });
+      let docs = 0, users = 0;
+      for (const d of await store.listDocs(null)) {
+        if (d.deleted || (d.col === "members" && d.id === me.id)) continue;
+        await store.putDoc(d.col, d.id, d.data, true); docs++; // tombstone, so open apps drop it on next sync
+      }
+      for (const u of await store.listUsers()) if (u.id !== me.id) { await store.deleteUser(u.id); users++; }
+      await store.setKV("import:idmap", null);
+      await ensureMember(store, me);
+      return send(res, 200, { ok: true, docs, users });
+    }
+
     /* ---------- invite an outside person to follow one project ---------- */
     const pi = p.match(/^\/projects\/([A-Za-z0-9_\-.:]{1,80})\/invite$/);
     if (pi && m === "POST") {
