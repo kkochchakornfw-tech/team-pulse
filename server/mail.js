@@ -1,11 +1,22 @@
 // Email through Resend's HTTP API. Without RESEND_API_KEY (local development) mail is kept in an
 // outbox you can read at /api/dev/outbox and printed to the terminal.
 export const outbox = [];
-export const mailMode = () => (process.env.RESEND_API_KEY ? "resend" : "dev");
+// Resend (own domain), or a Google Apps Script web app that sends from a Gmail account (GAS_MAIL_URL + GAS_MAIL_SECRET).
+export const mailMode = () => (process.env.RESEND_API_KEY ? "resend" : process.env.GAS_MAIL_URL && process.env.GAS_MAIL_SECRET ? "gas" : "dev");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
 export async function sendMail({ to, subject, html, text }) {
   if (!to) return { skipped: true };
+  if (mailMode() === "gas") {
+    try {
+      // Apps Script answers a POST with a redirect to the script's output; fetch follows it
+      const r = await fetch(process.env.GAS_MAIL_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, redirect: "follow",
+        body: JSON.stringify({ secret: process.env.GAS_MAIL_SECRET, to, subject, html, text, name: process.env.MAIL_NAME || "Team Pulse" }) });
+      const out = await r.text(); let j = null; try { j = JSON.parse(out); } catch (e) {}
+      if (!r.ok || !j || !j.ok) console.error("[mail] Apps Script error", r.status, String(out).slice(0, 300));
+      return { ok: !!(j && j.ok) };
+    } catch (e) { console.error("[mail] Apps Script send failed", e); return { ok: false }; }
+  }
   if (!process.env.RESEND_API_KEY) {
     outbox.unshift({ to, subject, text, html, at: new Date().toISOString() }); outbox.length = Math.min(outbox.length, 50);
     console.log(`[mail:dev] → ${to} · ${subject}${text ? "\n  " + text.split("\n").join("\n  ") : ""}`);

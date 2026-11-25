@@ -16,6 +16,7 @@
 1. push โฟลเดอร์ `team-pulse` ขึ้น GitHub แล้ว Import ใน Vercel (Framework: Vite)
 2. ใน Vercel → **Storage**: สร้าง **Neon** (Postgres) และ **Blob** แล้วเชื่อมกับโปรเจกต์ จะได้ `DATABASE_URL` และ `BLOB_READ_WRITE_TOKEN` อัตโนมัติ
 3. สมัคร **Resend** ยืนยันโดเมนที่จะใช้ส่งเมล สร้าง API key
+   - **ไม่มีโดเมน?** ใช้ Gmail ส่งแทนได้: วาง `scripts/gmail-relay.gs` ใน script.google.com แล้ว deploy เป็น Web app (Execute as: Me, Who has access: Anyone) ตั้ง Script Property `SECRET` แล้วใส่ `GAS_MAIL_URL` + `GAS_MAIL_SECRET` (ค่าเดียวกับ SECRET) ใน Vercel ส่งได้ประมาณวันละ 100 คน
 4. ใส่ Environment Variables ตาม `.env.example`: `RESEND_API_KEY`, `MAIL_FROM`, `AUTH_SECRET`, `APP_URL`, `CRON_SECRET`
 5. Deploy แล้วเปิดเว็บ ใส่อีเมลของคุณ **คนแรกที่ล็อกอินจะเป็นเจ้าของ** หลังจากนั้นเชิญคนอื่นได้ที่เมนู “คนและสิทธิ์”
 
